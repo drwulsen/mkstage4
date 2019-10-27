@@ -54,18 +54,18 @@ fi
 
 USAGE="usage:\n\
 `basename $0` [-q -c -b -l -k -o -p -v] [-s || -t <target-mountpoint>] [-e <additional excludes dir*>] <archive-filename> [custom-tar-options]\n\
--q: activates quiet mode (no confirmation).\n\
--c: excludes connman network lists.\n\
--b: excludes boot directory.\n\
--l: excludes lost+found directory.\n\
--o: stay on filesystem, do not traverse other FS.\n\
--p: compresses parallelly using pbzip2.\n\
--e: an additional excludes directory (one dir one -e, donot use it with *).\n\
--s: makes tarball of current system.\n\
--k: separately save current kernel modules and src (smaller & save decompression time).\n\
--t: makes tarball of system located at the <target-mountpoint>.\n\
--v: enables tar verbose output.\n\
--h: displays help message."
+ -q: activates quiet mode (no confirmation).\n\
+ -c: excludes connman network lists.\n\
+ -b: excludes boot directory.\n\
+ -l: excludes lost+found directory.\n\
+ -o: stay on filesystem, do not traverse other FS.\n\
+ -p: compresses parallelly using pbzip2.\n\
+ -e: an additional excludes directory (one dir one -e, donot use it with *).\n\
+ -s: makes tarball of current system.\n\
+ -k: separately save current kernel modules and src (smaller & save decompression time).\n\
+ -t: makes tarball of system located at the <target-mountpoint>.\n\
+ -v: enables tar verbose output.\n\
+ -h: displays help message."
 
 # reads options:
 while getopts ':t:e:skqcblopvh' flag; do
