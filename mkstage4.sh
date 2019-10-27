@@ -218,18 +218,12 @@ fi
 # Generic tar options:
 TAR_OPTIONS="--create --preserve-permissions --absolute-names --ignore-failed-read --xattrs-include='*.*' --numeric-owner --sparse --exclude-backups --exclude-caches --sort=name"
 
-if [ ${PARALLEL} -eq 1 ] 
-then
-  if hash pbzip2 2>/dev/null; then
-    TAR_OPTIONS+=" --use-compress-prog=pbzip2"
-  else
-    echo "WARING: pbzip2 isn't installed, single-threaded compressing is used."
-    TAR_OPTIONS+=" -j"
-  fi
+if [ ${PARALLEL} -eq 1 ] && [ `which pbzip2` ]; then
+	TAR_OPTIONS+=" --use-compress-prog=pbzip2"
 else
-  TAR_OPTIONS+=" -j"
+	echo "WARING: pbzip2 isn't installed, single-threaded compressing is used."
+	TAR_OPTIONS+=" -j"
 fi
-
 if [ ${VERBOSE} -eq 1 ]
 then
     TAR_OPTIONS+=" --verbose"
