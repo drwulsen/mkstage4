@@ -1,12 +1,13 @@
 # mkstage4
+This is a fork of the mkstage4 script maintained by Christian Horea (TheChymera).
+It contains some improvements which I was missing.
+All of this could be included in the original overlay, but it is not for my poor github-foo.
+So feel free to take whatever you please from here; but be aware that there's no warranty for anything.
 
+# history
 This is a Bash script to create stage 4 tarballs either for the running system, or a system at a specified mount point.
 The script is a new edition of an earlier [mkstage4 script](https://github.com/gregf/bin/blob/master/mkstage4) by Greg Fitzgerald (unmaintained as of 2012) which is itself a revamped edition of the [original mkstage4](http://blinkeye.ch/dokuwiki/doku.php/projects/mkstage4) by Reto Glauser (unmaintaied as of 2009). 
  
-More information on mkstage4 can be found on its own Chymeric Tutorials article: [mkstage4 - Stage 4 Tarballs Made Easy](http://tutorials.chymera.eu/blog/2014/05/18/mkstage4-stage4-tarballs-made-easy/). 
-
-Chinese Introduction [中文说明](http://liuk.io/blog/gentoo-stage4)
-
 ## Installation
 
 The script can be run directly from its containing folder (and thus, is installed simply by downloading or cloning it from here - and adding run permissions):
@@ -15,13 +16,6 @@ The script can be run directly from its containing folder (and thus, is installe
 git clone https://github.com/TheChymera/mkstage4.git /your/mkstage4/directory
 cd /your/mkstage4/directory
 chmod +x mkstage4.sh
-```
-
-For [Gentoo Linux](http://en.wikipedia.org/wiki/Gentoo_linux) and [Derivatives](http://en.wikipedia.org/wiki/Category:Gentoo_Linux_derivatives), mkstage4 is also available in [Portage](http://en.wikipedia.org/wiki/Portage_(software)) via the base Gentoo overlay.
-On any Gentoo system, just run the following command:
-
-```
-emerge app-backup/mkstage4
 ```
 
 ## Usage
@@ -43,16 +37,18 @@ mkstage4 -t /custom/mount/point archive_name
 Command line arguments:
 
 ```
-  mkstage4.sh [-q -c -b -l -k -p] [-s || -t <target-mountpoint>] [-e <additional excludes dir*>] <archive-filename> [custom-tar-options]
+  mkstage4 [-q -c -b -l -k -o -p -v] [-s || -t <target-mountpoint>] [-e <additional excludes dir*>] <archive-filename> [custom-tar-options]
   -q: activates quiet mode (no confirmation).
   -c: excludes connman network lists.
   -b: excludes boot directory.
   -l: excludes lost+found directory.
+  -o: stay on filesystem, do not traverse other FS.
   -p: compresses parallelly using pbzip2.
-  -e: an additional excludes directory (one dir one -e).
+  -e: an additional excludes directory (one dir one -e, donot use it with *).
   -s: makes tarball of current system.
   -k: separately save current kernel modules and src (smaller & save decompression time).
   -t: makes tarball of system located at the <target-mountpoint>.
+  -v: enables tar verbose output.
   -h: displays help message.
 ```
 
@@ -67,8 +63,8 @@ tar xvjpf archive_name.tar.bz2
 If you use -k option, extract src & modules separately
 
 ```bash
-tar xvjpf archive_name.tar.bz2.kmod
-tar xvjpf archive_name.tar.bz2.ksrc
+tar xvjpf archive_name-ksrc.tar.bz2
+tar xvjpf archive_name-kmod.tar.bz2
 ```
 
 If you have install pbzip2, you can extract parallelly with:
@@ -87,4 +83,4 @@ tar -I pbzip2 -xvf archive_name.tar.bz2
 
 ---
 Released under the GPLv3 license.
-Project led by Horea Christian (address all correspondence to: chr@chymera.eu).
+Project forked from TheChymera
