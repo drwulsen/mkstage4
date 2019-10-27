@@ -58,20 +58,22 @@ then
     x86_64=1
 fi
 USAGE="usage:\n\
-  `basename $0` [-q -c -b -l -k -p] [-s || -t <target-mountpoint>] [-e <additional excludes dir*>] <archive-filename> [custom-tar-options]\n\
+  `basename $0` [-q -c -b -l -k -o -p -v] [-s || -t <target-mountpoint>] [-e <additional excludes dir*>] <archive-filename> [custom-tar-options]\n\
   -q: activates quiet mode (no confirmation).\n\
   -c: excludes connman network lists.\n\
   -b: excludes boot directory.\n\
   -l: excludes lost+found directory.\n\
+  -o: stay on filesystem, do not traverse other FS.\n\
   -p: compresses parallelly using pbzip2.\n\
   -e: an additional excludes directory (one dir one -e, donot use it with *).\n\
   -s: makes tarball of current system.\n\
   -k: separately save current kernel modules and src (smaller & save decompression time).\n\
   -t: makes tarball of system located at the <target-mountpoint>.\n\
+  -v: enables tar verbose output.\n\
   -h: displays help message."
 
 # reads options:
-while getopts ':t:e:skqcblph' flag; do
+while getopts ':t:e:skqcblopvh' flag; do
   case "${flag}" in
     t)
       TARGET="$OPTARG"
@@ -97,6 +99,15 @@ while getopts ':t:e:skqcblph' flag; do
     e)
       USER_EXCL+=" --exclude=${OPTARG}"
       ;;
+    o)
+      ONE_FS=1
+      ;;
+    p)
+      PARALLEL=1
+      ;;
+    v)
+      VERBOSE=1
+      ;;    
     p)
       PARALLEL=1
       ;;
@@ -199,7 +210,7 @@ then
 fi
 
 # Generic tar options:
-TAR_OPTIONS="-cpP --ignore-failed-read --xattrs-include='*.*' --numeric-owner"
+TAR_OPTIONS="--create --preserve-permissions --absolute-names --ignore-failed-read --xattrs-include='*.*' --numeric-owner --sparse --exclude-backups --exclude-caches --sort=name"
 
 if [ ${PARALLEL} -eq 1 ] 
 then
@@ -211,6 +222,16 @@ then
   fi
 else
   TAR_OPTIONS+=" -j"
+fi
+
+if [ ${VERBOSE} -eq 1 ]
+then
+    TAR_OPTIONS+=" --verbose"
+fi
+
+if [ ${ONE_FS} -eq 1 ]
+then
+    TAR_OPTIONS+=" --one-file-system"
 fi
 
 # Loop through the final excludes list, before starting
@@ -232,13 +253,13 @@ then
   echo "example: \$ `basename $0` -s /my-backup --exclude=/etc/ssh/ssh_host*"
   echo ""
   echo "COMMAND LINE PREVIEW:"
-  echo "tar $TAR_OPTIONS $EXCLUDES $OPTIONS -f $STAGE4_FILENAME ${TARGET}*"
+    echo "tar $TAR_OPTIONS $EXCLUDES $OPTIONS --file=$STAGE4_FILENAME ${TARGET}*"
   if [ ${S_KERNEL} -eq 1 ]
   then
     echo ""
-    echo  "tar $TAR_OPTIONS -f $STAGE4_FILENAME.ksrc ${TARGET}usr/src/linux*"
+    echo  "tar $TAR_OPTIONS --file=$STAGE4_FILENAME.ksrc ${TARGET}usr/src/linux*"
     echo ""
-    echo  "tar $TAR_OPTIONS -f $STAGE4_FILENAME.kmod ${TARGET}lib64/modules/* ${TARGET}lib/modules/*"
+    echo  "tar $TAR_OPTIONS --file=$STAGE4_FILENAME.kmod ${TARGET}lib64/modules/* ${TARGET}lib/modules/*"
   fi
   echo ""
   echo -n "Type \"yes\" to continue or anything else to quit: "
@@ -248,11 +269,11 @@ fi
 # start stage4 creation:
 if [ "$AGREE" == "yes" ]
 then
-  tar $TAR_OPTIONS $EXCLUDES $OPTIONS -f $STAGE4_FILENAME ${TARGET}*
+  tar $TAR_OPTIONS $EXCLUDES $OPTIONS ${TARGET}* --file="$STAGE4_FILENAME"
   if [ ${S_KERNEL} -eq 1 ]
   then
-    tar $TAR_OPTIONS -f $STAGE4_FILENAME.ksrc ${TARGET}usr/src/linux*
-    tar $TAR_OPTIONS -f $STAGE4_FILENAME.kmod ${TARGET}lib64/modules/* ${TARGET}lib/modules/*
+    tar $TAR_OPTIONS ${TARGET}usr/src/linux* --file="$STAGE4_FILENAME.ksrc"
+    tar $TAR_OPTIONS ${TARGET}lib64/modules/* ${TARGET}lib/modules/* --file="$STAGE4_FILENAME.kmod"
   fi
 fi
 
