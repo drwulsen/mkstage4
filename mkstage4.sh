@@ -14,7 +14,6 @@ EXCLUDE_LOST=0
 QUIET=0
 USER_EXCL=""
 S_KERNEL=0
-x86_64=0
 PARALLEL=0
 HAS_PORTAGEQ=0
 
@@ -161,12 +160,8 @@ shift;OPTIONS="$@"
 if [ ${S_KERNEL} -eq 1 ]
 then
     EXCLUDES_LIST+=("usr/src"/*)
-    if [ ${x86_64} -eq 1 ]
-    then
-        EXCLUDES_LIST+=("lib64/modules"/*)
-    else
-	EXCLUDES_LIST+=("lib/modules/"*)
-  fi
+    EXCLUDES_LIST+=("lib64/modules"/*)
+    EXCLUDES_LIST+=("lib/modules/"*)
 fi
 
 EXCLUDES+=$USER_EXCL
@@ -241,15 +236,9 @@ then
   if [ ${S_KERNEL} -eq 1 ]
   then
     echo ""
-    echo  "tar $TAR_OPTIONS -f $STAGE4_FILENAME.ksrc ${TARGET}usr/src/linux-$(uname -r)*"
-    if [ ${x86_64} -eq 1 ]
-    then
-        echo ""
-        echo  "tar $TAR_OPTIONS -f $STAGE4_FILENAME.kmod ${TARGET}lib64/modules/$(uname -r)*"
-    else
-        echo ""
-        echo  "tar $TAR_OPTIONS -f $STAGE4_FILENAME.kmod ${TARGET}lib/modules/$(uname -r)*"
-    fi
+    echo  "tar $TAR_OPTIONS -f $STAGE4_FILENAME.ksrc ${TARGET}usr/src/linux*"
+    echo ""
+    echo  "tar $TAR_OPTIONS -f $STAGE4_FILENAME.kmod ${TARGET}lib64/modules/* ${TARGET}lib/modules/*"
   fi
   echo ""
   echo -n "Type \"yes\" to continue or anything else to quit: "
@@ -262,13 +251,8 @@ then
   tar $TAR_OPTIONS $EXCLUDES $OPTIONS -f $STAGE4_FILENAME ${TARGET}*
   if [ ${S_KERNEL} -eq 1 ]
   then
-    tar $TAR_OPTIONS -f $STAGE4_FILENAME.ksrc ${TARGET}usr/src/linux-$(uname -r)*
-    if [ ${x86_64} -eq 1 ]
-    then
-        tar $TAR_OPTIONS -f $STAGE4_FILENAME.kmod ${TARGET}lib64/modules/$(uname -r)*
-    else
-        tar $TAR_OPTIONS -f $STAGE4_FILENAME.kmod ${TARGET}lib/modules/$(uname -r)*
-    fi
+    tar $TAR_OPTIONS -f $STAGE4_FILENAME.ksrc ${TARGET}usr/src/linux*
+    tar $TAR_OPTIONS -f $STAGE4_FILENAME.kmod ${TARGET}lib64/modules/* ${TARGET}lib/modules/*
   fi
 fi
 
