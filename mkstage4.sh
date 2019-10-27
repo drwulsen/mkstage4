@@ -15,6 +15,8 @@ USER_EXCL=""
 S_KERNEL=0
 PARALLEL=0
 HAS_PORTAGEQ=0
+VERBOSE=0
+ONE_FS=0
 
 # Excludes - newline-delimited list of things to leave out. Put in double-quotes, please
 EXCLUDES_LIST=(
@@ -227,12 +229,10 @@ if [ "$AGREE" != "yes" ]; then
   echo -e "Are you sure that you want to make a stage 4 tarball${normal} of the system
   \rlocated under the following directory?
   \r"$TARGET"
-
   \rWARNING: since all data is saved by default the user should exclude all
   \rsecurity- or privacy-related files and directories, which are not
   \ralready excluded by mkstage4 options (such as -c), manually per cmdline.
   \rexample: \$ `basename $0` -s /my-backup --exclude=/etc/ssh/ssh_host*
-
   \rCOMMAND LINE PREVIEW:
   \r###SYSTEM###
   \rtar $TAR_OPTIONS $EXCLUDES $OPTIONS --file=$STAGE4_FILENAME ${TARGET}*"
@@ -241,8 +241,8 @@ if [ ${S_KERNEL} -eq 1 ]; then
   echo -e "
   \r###KERNEL SOURCE###
   \rtar $TAR_OPTIONS --file="$KSRC_FILENAME" ${TARGET}usr/src/linux*
-  
-  \r###KERNEL MODULES###  
+
+  \r###KERNEL MODULES###
   \rtar $TAR_OPTIONS --file="$KMOD_FILENAME" ${TARGET}lib64/modules/* ${TARGET}lib/modules/*"
 fi
   echo -ne "\n
