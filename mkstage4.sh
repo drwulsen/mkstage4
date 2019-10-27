@@ -19,25 +19,25 @@ HAS_PORTAGEQ=0
 
 # Excludes - whitespace delimited list of things to leave out
 EXCLUDES_LIST=(
-	home/*/.bash_history
-	dev/*
-	var/tmp/*
-	media/*
-	mnt/*
-	proc/*
-	run/*
-	sys/*
-	tmp/*
-	var/lock/*
-	var/log/*
-	var/run/*
-	var/lib/docker/*
+	"home/*/.bash_history"
+	"dev/*"
+	"var/tmp/*"
+	"media/*"
+	"mnt/*"
+	"proc/*"
+	"run/*"
+	"sys/*"
+	"tmp/*"
+	"var/lock/*"
+	"var/log/*"
+	"var/run/*"
+	"var/lib/docker/*"
 )
 
 EXCLUDES_LIST_PORTAGE=(
-	var/db/repos/gentoo/*
-	usr/portage*
-	var/cache/distfiles/*
+	"var/db/repos/gentoo/*"
+	"usr/portage*"
+	"var/cache/distfiles/*"
 )
 
 # Excludes function - create tar --exclude=foo options
