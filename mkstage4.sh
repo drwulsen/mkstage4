@@ -245,7 +245,7 @@ if [ ${S_KERNEL} -eq 1 ]; then
   \r###KERNEL MODULES###  
   \rtar $TAR_OPTIONS --file="$KMOD_FILENAME" ${TARGET}lib64/modules/* ${TARGET}lib/modules/*"
 fi
-  echo -e "
+  echo -ne "\n
   \rType \"yes\" to continue or anything else to quit: "
   read AGREE
 fi
