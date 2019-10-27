@@ -161,8 +161,12 @@ fi
 if [ "`echo $ARCHIVE | grep -c '^\/'`" -gt "0" ]
 then
   STAGE4_FILENAME="${ARCHIVE}.tar.bz2"
+  KSRC_FILENAME="${ARCHIVE}-ksrc.tar.bz2"
+  KMOD_FILENAME="${ARCHIVE}-kmod.tar.bz2"
 else
   STAGE4_FILENAME="`pwd`/${ARCHIVE}.tar.bz2"
+  KSRC_FILENAME="`pwd`/${ARCHIVE}-ksrc.tar.bz2"
+  KMOD_FILENAME="`pwd`/${ARCHIVE}-kmod.tar.bz2"
 fi
 
 #Shifts pointer to read custom tar options
@@ -173,6 +177,8 @@ then
     EXCLUDES_LIST+=("usr/src"/*)
     EXCLUDES_LIST+=("lib64/modules"/*)
     EXCLUDES_LIST+=("lib/modules/"*)
+    EXCLUDES_LIST+=("$KSRC_FILENAME")
+    EXCLUDES_LIST+=("$KMOD_FILENAME")
 fi
 
 EXCLUDES+=$USER_EXCL
@@ -257,9 +263,9 @@ then
   if [ ${S_KERNEL} -eq 1 ]
   then
     echo ""
-    echo  "tar $TAR_OPTIONS --file=$STAGE4_FILENAME.ksrc ${TARGET}usr/src/linux*"
+    echo  "tar $TAR_OPTIONS --file="$KSRC_FILENAME" ${TARGET}usr/src/linux*"
     echo ""
-    echo  "tar $TAR_OPTIONS --file=$STAGE4_FILENAME.kmod ${TARGET}lib64/modules/* ${TARGET}lib/modules/*"
+    echo  "tar $TAR_OPTIONS --file="$KMOD_FILENAME" ${TARGET}lib64/modules/* ${TARGET}lib/modules/*"
   fi
   echo ""
   echo -n "Type \"yes\" to continue or anything else to quit: "
@@ -272,8 +278,8 @@ then
   tar $TAR_OPTIONS $EXCLUDES $OPTIONS ${TARGET}* --file="$STAGE4_FILENAME"
   if [ ${S_KERNEL} -eq 1 ]
   then
-    tar $TAR_OPTIONS ${TARGET}usr/src/linux* --file="$STAGE4_FILENAME.ksrc"
-    tar $TAR_OPTIONS ${TARGET}lib64/modules/* ${TARGET}lib/modules/* --file="$STAGE4_FILENAME.kmod"
+    tar $TAR_OPTIONS ${TARGET}usr/src/linux* --file="$KSRC_FILENAME"
+    tar $TAR_OPTIONS ${TARGET}lib64/modules/* ${TARGET}lib/modules/* --file="$KMOD_FILENAME"
   fi
 fi
 
