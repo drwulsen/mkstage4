@@ -4,9 +4,9 @@ It contains some improvements which I was missing.
 All of this could be included in the original overlay, but it is not for my poor github-foo.
 So feel free to take whatever you please from here; but be aware that there's no warranty for anything.
 
-# history
+## History
 This is a Bash script to create stage 4 tarballs either for the running system, or a system at a specified mount point.
-The script is a new edition of an earlier [mkstage4 script](https://github.com/gregf/bin/blob/master/mkstage4) by Greg Fitzgerald (unmaintained as of 2012) which is itself a revamped edition of the [original mkstage4](http://blinkeye.ch/dokuwiki/doku.php/projects/mkstage4) by Reto Glauser (unmaintaied as of 2009). 
+The script is a fork taken from TheChymera (https://github.com/TheChymera/mkstage4) which itself is a new edition of an earlier [mkstage4 script](https://github.com/gregf/bin/blob/master/mkstage4) by Greg Fitzgerald (unmaintained as of 2012) which is itself a revamped edition of the [original mkstage4](http://blinkeye.ch/dokuwiki/doku.php/projects/mkstage4) by Reto Glauser (unmaintaied as of 2009). 
  
 ## Installation
 
