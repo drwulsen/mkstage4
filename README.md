@@ -25,31 +25,35 @@ chmod +x mkstage4.sh
 Archive your current system (mounted at /):
 
 ```bash
-mkstage4 -s archive_name
+mkstage4 -s -f archive_name
 ```
 
 Archive system located at a custom mount point:
 
 ```bash
-mkstage4 -t /custom/mount/point archive_name
+mkstage4 -t /custom/mount/point -f archive_name
 ```
 
 Command line arguments:
 
 ```
-  mkstage4 [-q -c -b -l -k -o -p -v] [-s || -t <target-mountpoint>] [-e <additional excludes dir*>] <archive-filename> [custom-tar-options]
-  -q: activates quiet mode (no confirmation).
-  -c: excludes connman network lists.
-  -b: excludes boot directory.
-  -l: excludes lost+found directory.
-  -o: stay on filesystem, do not traverse other FS.
-  -p: compresses parallelly using pbzip2.
-  -e: an additional excludes directory (one dir one -e, donot use it with *).
-  -s: makes tarball of current system.
-  -k: separately save current kernel modules and src (smaller & save decompression time).
-  -t: makes tarball of system located at the <target-mountpoint>.
-  -v: enables tar verbose output.
-  -h: displays help message.
+mkstage4 [ -q -c -b -G -l -k -o -P -v -X ] [ -s || -t <target-mountpoint> ] [ -e <additional excludes dir*> ] [ -L 0..9 ] [ -f <archive-filename> ]
+ -q: quiet mode (no confirmation)
+ -b: exclude boot directory
+ -c: exclude connman network lists
+ -l: exclude lost+found directory
+ -o: stay on filesystem, do not traverse other FS. Watch out for /boot!
+ -B: compress using pbzip2 or bzip2 (default)
+ -X: compress using xz
+ -G: compress using pigz or gzip
+ -L: compression level between 0 (worst) and 9 (best). Default: 6
+ -S: show available compression programs
+ -e: an additional excludes directory (one dir one -e)
+ -s: makes tarball of current system (same as "-t /")
+ -k: separately save current kernel modules and src (smaller & save decompression time)
+ -t: makes tarball of system located at the <target-mountpoint>
+ -v: enables tar verbose output
+ -h: displays this help message
 ```
 
 ## Extract Tarball
@@ -57,29 +61,31 @@ Command line arguments:
 Tarballs created with mkstage4 can be extracted with:
 
 ```bash
-tar xvjpf archive_name.tar.bz2
+tar xvpf archive_name.tar.bz2
 ```
 
 If you use -k option, extract src & modules separately
 
 ```bash
-tar xvjpf archive_name-ksrc.tar.bz2
-tar xvjpf archive_name-kmod.tar.bz2
+tar xvpf archive_name-ksrc.tar.bz2
+tar xvpf archive_name-kmod.tar.bz2
 ```
-
-If you have install pbzip2, you can extract parallelly with:
-```bash
-tar -I pbzip2 -xvf archive_name.tar.bz2
-```
-
 ## Dependencies
 
 * **[Bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell))** - in [Portage](http://en.wikipedia.org/wiki/Portage_(software)) as **app-shells/bash**
 * **[tar](https://en.wikipedia.org/wiki/Tar_(computing))** - in Portage as **app-arch/tar**
+**One-or-many-of:
+* **[gzip](https://www.gnu.org/software/gzip/)** - in Portage as **app-arch/gzip**
+* **[pigz](https://www.zlib.net/pigz/)** (optional, if it is installed the archive can be compressed using multiple parallel threads) - in Portage as
+**app-arch/pigz**
+* **[bzip2](https://en.wikipedia.org/wiki/Bzip2)** - in Portage as
+**app-arch/bzip2**
 * **[pbzip2](https://launchpad.net/pbzip2)** (optional, if it is installed the archive can be compressed using multiple parallel threads) - in Portage as
 **app-arch/pbzip2**
 
-*Please note that these are very basic dependencies and should already be included in any Linux system.*
+
+*Please note that most of these are very basic dependencies and should already be included in any Linux system,
+the parallel versions will be used if available, otherwise we fall back to a single compression thread.*
 
 ---
 Released under the GPLv3 license.
