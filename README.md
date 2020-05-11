@@ -74,15 +74,13 @@ tar xvpf archive_name-kmod.tar.bz2
 
 * **[Bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell))** - in [Portage](http://en.wikipedia.org/wiki/Portage_(software)) as **app-shells/bash**
 * **[tar](https://en.wikipedia.org/wiki/Tar_(computing))** - in Portage as **app-arch/tar**
+
 **One-or-many-of:**
 * **[gzip](https://www.gnu.org/software/gzip/)** - in Portage as **app-arch/gzip**
-* **[pigz](https://www.zlib.net/pigz/)** (optional, if it is installed the archive can be compressed using multiple parallel threads) - in Portage as
-**app-arch/pigz**
-* **[bzip2](https://en.wikipedia.org/wiki/Bzip2)** - in Portage as
-**app-arch/bzip2**
-* **[pbzip2](https://launchpad.net/pbzip2)** (optional, if it is installed the archive can be compressed using multiple parallel threads) - in Portage as
-**app-arch/pbzip2**
-
+* **[pigz](https://www.zlib.net/pigz/)** - in Portage as **app-arch/pigz**
+* **[bzip2](https://en.wikipedia.org/wiki/Bzip2)** - in Portage as **app-arch/bzip2**
+* **[pbzip2](https://launchpad.net/pbzip2)** - in Portage as **app-arch/pbzip2**
+* **[xz](https://en.wikipedia.org/wiki/XZ_Utils)** - in Portage as **app-arch/xz-utils**
 
 *Please note that most of these are very basic dependencies and should already be included in any Linux system,
 the parallel versions will be used if available, otherwise we fall back to a single compression thread.*
