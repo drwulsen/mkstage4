@@ -6,21 +6,28 @@ if ! [ "`whoami`" == "root" ]; then
   exit 1
 fi
 
-#set flag variables to null
+# Set variables to default values
 EXCLUDE_BOOT=0
 EXCLUDE_CONNMAN=0
 EXCLUDE_LOST=0
 QUIET=0
 USER_EXCL=""
 S_KERNEL=0
-PARALLEL=0
 HAS_PORTAGEQ=0
+HAS_BZIP2=0
+HAS_PBZIP2=0
+HAS_GZIP=0
+HAS_PIGZ=0
+HAS_XZ=0
+COMPRESSOR="bzip"
+LEVEL=6
 VERBOSE=0
 ONE_FS=0
 
 # Excludes - newline-delimited list of things to leave out. Put in double-quotes, please
 EXCLUDES_LIST=(
-"home/*/.bash_history"
+"*/.bash_history"
+"*/.lesshst"
 "dev/*"
 "var/tmp/*"
 "media/*"
@@ -49,77 +56,86 @@ exclude()
   EXCLUDES+=" --exclude=${TARGET}${ADDEXCLUDE}"
 }
 
-# Check if portageq is available
-if [ `which portageq` ]; then
-  HAS_PORTAGEQ=1
-fi
+# Check if program is available function
+checkset()
+{
+	if [ `which "$1" 2> /dev/null` ]; then
+		echo 1
+	else
+		echo 0
+	fi
+}
+
+HAS_PORTAGEQ=$(checkset portageq)
+HAS_GZIP=$(checkset gzip)
+HAS_PIGZ=$(checkset pigz)
+HAS_BZIP2=$(checkset bzip2)
+HAS_PBZIP2=$(checkset pbzip2)
+HAS_XZ=$(checkset xz)
 
 USAGE="usage:\n\
-`basename $0` [-q -c -b -l -k -o -p -v] [-s || -t <target-mountpoint>] [-e <additional excludes dir*>] <archive-filename> [custom-tar-options]\n\
- -q: activates quiet mode (no confirmation).\n\
- -c: excludes connman network lists.\n\
- -b: excludes boot directory.\n\
- -l: excludes lost+found directory.\n\
- -o: stay on filesystem, do not traverse other FS.\n\
- -p: compresses parallelly using pbzip2.\n\
- -e: an additional excludes directory (one dir one -e, donot use it with *).\n\
- -s: makes tarball of current system.\n\
- -k: separately save current kernel modules and src (smaller & save decompression time).\n\
- -t: makes tarball of system located at the <target-mountpoint>.\n\
- -v: enables tar verbose output.\n\
- -h: displays help message."
+`basename $0` [ -q -c -b -G -l -k -o -P -v -X ] [ -s || -t <target-mountpoint> ] [ -e <additional excludes dir*> ] [ -L 0..9 ] [ -f <archive-filename> ]\n\
+ -q: quiet mode (no confirmation)\n\
+ -b: exclude boot directory\n\
+ -c: exclude connman network lists\n\
+ -l: exclude lost+found directory\n\
+ -o: stay on filesystem, do not traverse other FS. Watch out for /boot!\n\
+ -B: compress using pbzip2 or bzip2 (default)\n\
+ -X: compress using xz
+ -G: compress using pigz or gzip
+ -L: compression level between 0 (worst) and 9 (best). Default: 6
+ -S: show available compression programs
+ -e: an additional excludes directory (one dir one -e)\n\
+ -s: makes tarball of current system (same as \"-t /\")\n\
+ -k: separately save current kernel modules and src (smaller & save decompression time)\n\
+ -t: makes tarball of system located at the <target-mountpoint>\n\
+ -v: enables tar verbose output\n\
+ -h: displays this help message"
 
 # reads options:
-while getopts ':t:e:skqcblopvh' flag; do
+while getopts ':t:e:skqcblovhGBXL:Pf:' flag; do
   case "${flag}" in
     t)
-      TARGET="$OPTARG"
-      ;;
+    TARGET="$OPTARG";;
     s)
-      TARGET="/"
-      ;;
+    TARGET="/";;
     q)
-      QUIET=1
-      ;;
+    QUIET=1;;
+    f)
+    ARCHIVE="$OPTARG";;
     k)
-      S_KERNEL=1
-      ;;
+    S_KERNEL=1;;
     c)
-      EXCLUDE_CONNMAN=1
-      ;;
+    EXCLUDE_CONNMAN=1;;
     b)
-      EXCLUDE_BOOT=1
-      ;;
+    EXCLUDE_BOOT=1;;
     l)
-      EXCLUDE_LOST=1
-      ;;
+    EXCLUDE_LOST=1;;
     e)
-      USER_EXCL+=" --exclude=${OPTARG}"
-      ;;
+    USER_EXCL+=" --exclude=${OPTARG}";;
     o)
-      ONE_FS=1
-      ;;
-    p)
-      PARALLEL=1
-      ;;
+    ONE_FS=1;;
+    B)
+    COMPRESSOR="bzip";;
+    X)
+    COMPRESSOR="xz";;
+  	G)
+  	COMPRESSOR="gzip";;
+		L)
+		LEVEL="$OPTARG";;
     v)
-      VERBOSE=1
-      ;;
-    p)
-      PARALLEL=1
-      ;;
+    VERBOSE=1;;
     h)
-      echo -e "$USAGE"
-      exit 0
-      ;;
+    echo -e "$USAGE"
+    exit 0;;
+    f)
+    FILE="$OPTARG";;
     \?)
-      echo "Invalid option: -$OPTARG" >&2
-      exit 1
-      ;;
+    echo "Invalid option: -$OPTARG" >&2
+    exit 1;;
     :)
-      echo "Option -$OPTARG requires an argument." >&2
-      exit 1
-      ;;
+    echo "Option -$OPTARG requires an argument." >&2
+    exit 1;;
   esac
 done
 
@@ -129,20 +145,15 @@ if [ "$TARGET" == "" ]; then
   exit 1
 fi
 
+digits='^[0-9]+$'
+if ! [[ $LEVEL =~ $digits ]]; then
+	echo "Error: compression level is not a number"
+	exit 1
+fi
+
 # make sure TARGET path ends with slash
 if [ "`echo $TARGET | grep -c '\/$'`" -le "0" ]; then
   TARGET="${TARGET}/"
-fi
-
-# shifts pointer to read mandatory output file specification
-shift $(($OPTIND - 1))
-ARCHIVE=$1
-
-# checks for correct output file specification
-if [ "$ARCHIVE" == "" ]; then
-  echo "`basename $0`: no archive file name specified."
-  echo -e "$USAGE"
-  exit 1
 fi
 
 # checks for quiet mode (no confirmation)
@@ -150,19 +161,62 @@ if [ ${QUIET} -eq 1 ]; then
   AGREE="yes"
 fi
 
+# check and set desired compress program, level and file extension
+#bzip and gzip use 1..9, whilst xz can do 0..9
+case "$COMPRESSOR" in
+	bzip)
+	if [ $LEVEL = 0 ]; then
+		LEVEL=1
+	fi
+	EXTENSION=".tar.bz2"
+	if [ HAS_PBZIP2 ]; then
+		COMPRESSOR="pbzip2"
+	elif [ HAS_BZIP2 ];	then
+		COMPRESSOR="bzip2"
+	else
+		echo "Neither pbzip2 nor bzip2 are available, but (p)bzip2 compression was requested, exiting."
+		exit 1
+	fi
+	;;
+	gzip)
+	if [ $LEVEL = 0 ]; then
+		LEVEL=1
+	fi
+	EXTENSION=".tar.gz"
+	if [ HAS_PIGZ ];	then
+		COMPRESSOR="pigz"
+	elif [ HAS_GZIP ];	then
+		COMPRESSOR="gzip"
+	else
+		echo "Neither pigz nor gzip are available, but pigz or gzip compression was requested, exiting."
+		exit 1
+	fi
+	;;
+	xz)
+	EXTENSION=".tar.xz"
+		if [ HAS_XZ ];	then
+		COMPRESSOR="xz -T0"
+	else
+		echo "XZ is not available, but xz compression was requested, exiting."
+		exit 1
+	fi
+	;;
+	?)
+	echo "No compression program requested, this should not even be possible, exiting."
+	exit 1
+	;;
+esac
+
 # determines if filename was given with relative or absolute path
 if [ "`echo $ARCHIVE | grep -c '^\/'`" -gt "0" ]; then
-  STAGE4_FILENAME="${ARCHIVE}.tar.bz2"
-  KSRC_FILENAME="${ARCHIVE}-ksrc.tar.bz2"
-  KMOD_FILENAME="${ARCHIVE}-kmod.tar.bz2"
+  STAGE4_FILENAME="${ARCHIVE}${EXTENSION}"
+  KSRC_FILENAME="${ARCHIVE}-ksrc${EXTENSION}"
+  KMOD_FILENAME="${ARCHIVE}-kmod${EXTENSION}"
 else
-  STAGE4_FILENAME="`pwd`/${ARCHIVE}.tar.bz2"
-  KSRC_FILENAME="`pwd`/${ARCHIVE}-ksrc.tar.bz2"
-  KMOD_FILENAME="`pwd`/${ARCHIVE}-kmod.tar.bz2"
+  STAGE4_FILENAME="`pwd`/${ARCHIVE}${EXTENSION}"
+  KSRC_FILENAME="`pwd`/${ARCHIVE}-ksrc${EXTENSION}"
+  KMOD_FILENAME="`pwd`/${ARCHIVE}-kmod${EXTENSION}"
 fi
-
-#Shifts pointer to read custom tar options
-shift;OPTIONS="$@"
 
 if [ ${S_KERNEL} -eq 1 ]; then
   EXCLUDES_LIST+=("usr/src"/*)
@@ -204,13 +258,6 @@ fi
 # Generic tar options:
 TAR_OPTIONS="--create --preserve-permissions --absolute-names --ignore-failed-read --xattrs-include='*.*' --numeric-owner --sparse --exclude-backups --exclude-caches --sort=name"
 
-if [ ${PARALLEL} -eq 1 ] && [ `which pbzip2` ]; then
-  TAR_OPTIONS+=" --use-compress-prog=pbzip2"
-else
-  echo "WARING: pbzip2 isn't installed, single-threaded compressing is used."
-  TAR_OPTIONS+=" -j"
-fi
-
 if [ ${VERBOSE} -eq 1 ]; then
   TAR_OPTIONS+=" --verbose"
 fi
@@ -227,24 +274,23 @@ done
 # if not in quiet mode, this message will be displayed:
 if [ "$AGREE" != "yes" ]; then
   echo -e "Are you sure that you want to make a stage 4 tarball${normal} of the system
-  \rlocated under the following directory?
-  \r"$TARGET"
-  \rWARNING: since all data is saved by default the user should exclude all
-  \rsecurity- or privacy-related files and directories, which are not
-  \ralready excluded by mkstage4 options (such as -c), manually per cmdline.
-  \rexample: \$ `basename $0` -s /my-backup --exclude=/etc/ssh/ssh_host*
-  \rCOMMAND LINE PREVIEW:
+  \rlocated under the following directory: $TARGET ?
+  \n\rWARNING: All data is saved by default, you should exclude every security- or privacy-related file,
+  \rnot already excluded by mkstage4 options (such as -c), manually per cmdline.
+  \rexample: \$ `basename $0` -s /my-backup --exclude=/etc/ssh/ssh_host*\n
+  \n\rCOMMAND LINE PREVIEW:
   \r###SYSTEM###
-  \rtar $TAR_OPTIONS $EXCLUDES $OPTIONS --file=$STAGE4_FILENAME ${TARGET}*"
+  \rtar $TAR_OPTIONS $EXCLUDES $OPTIONS -f - ${TARGET}* | ${COMPRESSOR} -$LEVEL -c > $STAGE4_FILENAME"
 
 if [ ${S_KERNEL} -eq 1 ]; then
   echo -e "
   \r###KERNEL SOURCE###
-  \rtar $TAR_OPTIONS --file="$KSRC_FILENAME" ${TARGET}usr/src/linux*
+  \rtar $TAR_OPTIONS -f - ${TARGET}usr/src/linux* | ${COMPRESSOR} -$LEVEL -c > $KSRC_FILENAME
 
   \r###KERNEL MODULES###
-  \rtar $TAR_OPTIONS --file="$KMOD_FILENAME" ${TARGET}lib64/modules/* ${TARGET}lib/modules/*"
+  \rtar $TAR_OPTIONS -f - ${TARGET}lib64/modules/* ${TARGET}lib/modules/* | ${COMPRESSOR} -$LEVEL -c >	$KMOD_FILENAME"
 fi
+	echo -e "Compression level: $LEVEL"
   echo -ne "\n
   \rType \"yes\" to continue or anything else to quit: "
   read AGREE
@@ -252,10 +298,10 @@ fi
 
 # start stage4 creation:
 if [ "$AGREE" == "yes" ]; then
-  tar $TAR_OPTIONS $EXCLUDES $OPTIONS ${TARGET}* --file="$STAGE4_FILENAME"
+	tar $TAR_OPTIONS $EXCLUDES $OPTIONS -f - ${TARGET}* | ${COMPRESSOR} -"$LEVEL" -c > "$STAGE4_FILENAME"
   if [ ${S_KERNEL} -eq 1 ]; then
-    tar $TAR_OPTIONS ${TARGET}usr/src/linux* --file="$KSRC_FILENAME"
-    tar $TAR_OPTIONS ${TARGET}lib64/modules/* ${TARGET}lib/modules/* --file="$KMOD_FILENAME"
+		tar $TAR_OPTIONS -f - ${TARGET}usr/src/linux* | ${COMPRESSOR} -"$LEVEL" -c > "$KSRC_FILENAME"
+    tar $TAR_OPTIONS -f - ${TARGET}lib64/modules/* ${TARGET}lib/modules/* | ${COMPRESSOR} -"$LEVEL" -c > "$KMOD_FILENAME"
   fi
 fi
 
