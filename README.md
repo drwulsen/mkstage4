@@ -74,7 +74,7 @@ tar xvpf archive_name-kmod.tar.bz2
 
 * **[Bash](https://en.wikipedia.org/wiki/Bash_(Unix_shell))** - in [Portage](http://en.wikipedia.org/wiki/Portage_(software)) as **app-shells/bash**
 * **[tar](https://en.wikipedia.org/wiki/Tar_(computing))** - in Portage as **app-arch/tar**
-**One-or-many-of:
+**One-or-many-of:**
 * **[gzip](https://www.gnu.org/software/gzip/)** - in Portage as **app-arch/gzip**
 * **[pigz](https://www.zlib.net/pigz/)** (optional, if it is installed the archive can be compressed using multiple parallel threads) - in Portage as
 **app-arch/pigz**
