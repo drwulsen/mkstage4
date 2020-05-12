@@ -45,7 +45,7 @@ EXCLUDES_LIST=(
 # Excludes portage default paths
 EXCLUDES_LIST_PORTAGE=(
 "var/db/repos/gentoo/*"
-"usr/portage*"
+"usr/portage/*"
 "var/cache/distfiles/*"
 )
 
@@ -53,7 +53,8 @@ EXCLUDES_LIST_PORTAGE=(
 exclude()
 {
   ADDEXCLUDE="$(echo "$1" | sed 's/^\///')"
-  EXCLUDES+=" --exclude=${TARGET}${ADDEXCLUDE}"
+  EXCLUDES+=" --exclude="$TARGET$ADDEXCLUDE""
+	echo "excluding "$TARGET$ADDEXCLUDE""
 }
 
 # Check if program is available function
@@ -232,15 +233,15 @@ EXCLUDES+=$USER_EXCL
 # Exclude portage repository and distfiles by portageq info
 # Revert to default, if portageq is not available or backup source is not host system
 if [ "$TARGET" == "/" ]; then
-  EXCLUDES_LIST+=("${STAGE4_FILENAME#/}")
+  EXCLUDES_LIST+=("${STAGE4_FILENAME}")
   if [ ${HAS_PORTAGEQ} == 1 ]; then
-    EXCLUDES_LIST+=($(portageq get_repo_path / gentoo)"/*")
-    EXCLUDES_LIST+=($(portageq distdir)"/*")
+    EXCLUDES_LIST+=($(portageq get_repo_path / gentoo)"/")
+    EXCLUDES_LIST+=($(portageq distdir)"/")
   else
-    EXCLUDES_LIST+=("${EXCLUDES_LIST_PORTAGE}")
+    EXCLUDES_LIST+=("${EXCLUDES_LIST_PORTAGE[@]}")
   fi
 else
-  EXCLUDES_LIST+=("${EXCLUDES_LIST_PORTAGE}")
+  EXCLUDES_LIST+=("${EXCLUDES_LIST_PORTAGE[@]}")
 fi
 
 if [ ${EXCLUDE_CONNMAN} -eq 1 ]; then
