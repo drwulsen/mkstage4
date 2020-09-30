@@ -7,54 +7,56 @@ if ! [ "`whoami`" == "root" ]; then
 fi
 
 # Set variables to default values
-EXCLUDE_BOOT=0
-EXCLUDE_CONNMAN=0
-EXCLUDE_LOST=0
-QUIET=0
-USER_EXCL=""
-S_KERNEL=0
-HAS_PORTAGEQ=0
-HAS_BZIP2=0
-HAS_PBZIP2=0
-HAS_GZIP=0
-HAS_PIGZ=0
-HAS_XZ=0
-COMPRESSOR="bzip"
-LEVEL=6
-VERBOSE=0
-ONE_FS=0
+exclude_boot=0
+exclude_connman=0
+exclude_lost=0
+quiet=0
+user_excl=""
+s_kernel=0
+has_portageq=0
+has_bzip2=0
+has_pbzip2=0
+has_gzip=0
+has_pigz=0
+has_xz=0
+compressor="bzip"
+level=6
+verbose=0
+one_fs=0
 
 # Excludes - newline-delimited list of things to leave out. Put in double-quotes, please
-EXCLUDES_LIST=(
-"*/.bash_history"
-"*/.lesshst"
-"dev/*"
-"var/tmp/*"
-"media/*"
-"mnt/*"
-"proc/*"
-"run/*"
-"sys/*"
-"tmp/*"
-"var/lock/*"
-"var/log/*"
-"var/run/*"
-"var/lib/docker/*"
+excludes_list=(
+*/.bash_history
+*/.lesshst
+dev/*
+var/tmp/*
+media/*
+mnt/*
+proc/*
+run/*
+sys/*
+tmp/*
+var/lock/*
+var/log/*
+var/run/*
+var/lib/docker/*
+home/misc/portage-reiserfs.img
+home/misc/ccache-reiserfs.img
 )
 
 # Excludes portage default paths
-EXCLUDES_LIST_PORTAGE=(
-"var/db/repos/gentoo/*"
-"usr/portage/*"
-"var/cache/distfiles/*"
+excludes_list_portage=(
+var/db/repos/gentoo/*
+usr/portage/*
+var/cache/distfiles/*
 )
 
 # Excludes function - create tar --exclude=foo options
 exclude()
 {
   ADDEXCLUDE="$(echo "$1" | sed 's/^\///')"
-  EXCLUDES+=" --exclude="$TARGET$ADDEXCLUDE""
-	echo "excluding "$TARGET$ADDEXCLUDE""
+  excludes+=" --exclude="$target$ADDEXCLUDE""
+	echo "excluding "$target$ADDEXCLUDE""
 }
 
 # Check if program is available function
@@ -67,14 +69,14 @@ checkset()
 	fi
 }
 
-HAS_PORTAGEQ=$(checkset portageq)
-HAS_GZIP=$(checkset gzip)
-HAS_PIGZ=$(checkset pigz)
-HAS_BZIP2=$(checkset bzip2)
-HAS_PBZIP2=$(checkset pbzip2)
-HAS_XZ=$(checkset xz)
+has_portageq=$(checkset portageq)
+has_gzip=$(checkset gzip)
+has_pigz=$(checkset pigz)
+has_bzip2=$(checkset bzip2)
+has_pbzip2=$(checkset pbzip2)
+has_xz=$(checkset xz)
 
-USAGE="usage:\n\
+usage="usage:\n\
 `basename $0` [ -q -c -b -G -l -k -o -P -v -X ] [ -s || -t <target-mountpoint> ] [ -e <additional excludes dir*> ] [ -L 0..9 ] [ -f <archive-filename> ]\n\
  -q: quiet mode (no confirmation)\n\
  -b: exclude boot directory\n\
@@ -97,40 +99,38 @@ USAGE="usage:\n\
 while getopts ':t:e:skqcblovhGBXL:Pf:' flag; do
   case "${flag}" in
     t)
-    TARGET="$OPTARG";;
+    target="$OPTARG";;
     s)
-    TARGET="/";;
+    target="/";;
     q)
-    QUIET=1;;
+    quiet=1;;
     f)
-    ARCHIVE="$OPTARG";;
+    archive="$OPTARG";;
     k)
-    S_KERNEL=1;;
+    s_kernel=1;;
     c)
-    EXCLUDE_CONNMAN=1;;
+    exclude_connman=1;;
     b)
-    EXCLUDE_BOOT=1;;
+    exclude_boot=1;;
     l)
-    EXCLUDE_LOST=1;;
+    exclude_lost=1;;
     e)
-    USER_EXCL+=" --exclude=${OPTARG}";;
+    user_excl+=" --exclude=${OPTARG}";;
     o)
-    ONE_FS=1;;
+    one_fs=1;;
     B)
-    COMPRESSOR="bzip";;
+    compressor="bzip";;
     X)
-    COMPRESSOR="xz";;
+    compressor="xz";;
   	G)
-  	COMPRESSOR="gzip";;
+  	compressor="gzip";;
 		L)
-		LEVEL="$OPTARG";;
+		level="$OPTARG";;
     v)
-    VERBOSE=1;;
+    verbose=1;;
     h)
-    echo -e "$USAGE"
+    echo -e "$usage"
     exit 0;;
-    f)
-    FILE="$OPTARG";;
     \?)
     echo "Invalid option: -$OPTARG" >&2
     exit 1;;
@@ -140,63 +140,63 @@ while getopts ':t:e:skqcblovhGBXL:Pf:' flag; do
   esac
 done
 
-if [ "$TARGET" == "" ]; then
+if [ "$target" == "" ]; then
   echo "`basename $0`: no target specified."
-  echo -e "$USAGE"
+  echo -e "$usage"
   exit 1
 fi
 
 digits='^[0-9]+$'
-if ! [[ $LEVEL =~ $digits ]]; then
+if ! [[ $level =~ $digits ]]; then
 	echo "Error: compression level is not a number"
 	exit 1
 fi
 
-# make sure TARGET path ends with slash
-if [ "`echo $TARGET | grep -c '\/$'`" -le "0" ]; then
-  TARGET="${TARGET}/"
+# make sure target path ends with slash
+if [ "`echo $target | grep -c '\/$'`" -le "0" ]; then
+  target="${target}/"
 fi
 
 # checks for quiet mode (no confirmation)
-if [ ${QUIET} -eq 1 ]; then
-  AGREE="yes"
+if [ ${quiet} -eq 1 ]; then
+  agree="yes"
 fi
 
 # check and set desired compress program, level and file extension
 #bzip and gzip use 1..9, whilst xz can do 0..9
-case "$COMPRESSOR" in
+case "$compressor" in
 	bzip)
-	if [ $LEVEL = 0 ]; then
-		LEVEL=1
+	if [ $level = 0 ]; then
+		level=1
 	fi
-	EXTENSION=".tar.bz2"
-	if [ HAS_PBZIP2 ]; then
-		COMPRESSOR="pbzip2"
-	elif [ HAS_BZIP2 ];	then
-		COMPRESSOR="bzip2"
+	extension=".tar.bz2"
+	if [ has_pbzip2 ]; then
+		compressor="pbzip2"
+	elif [ has_bzip2 ];	then
+		compressor="bzip2"
 	else
 		echo "Neither pbzip2 nor bzip2 are available, but (p)bzip2 compression was requested, exiting."
 		exit 1
 	fi
 	;;
 	gzip)
-	if [ $LEVEL = 0 ]; then
-		LEVEL=1
+	if [ $level = 0 ]; then
+		level=1
 	fi
-	EXTENSION=".tar.gz"
-	if [ HAS_PIGZ ];	then
-		COMPRESSOR="pigz"
-	elif [ HAS_GZIP ];	then
-		COMPRESSOR="gzip"
+	extension=".tar.gz"
+	if [ has_pigz ];	then
+		compressor="pigz"
+	elif [ has_gzip ];	then
+		compressor="gzip"
 	else
 		echo "Neither pigz nor gzip are available, but pigz or gzip compression was requested, exiting."
 		exit 1
 	fi
 	;;
 	xz)
-	EXTENSION=".tar.xz"
-		if [ HAS_XZ ];	then
-		COMPRESSOR="xz -T0"
+	extension=".tar.xz"
+		if [ has_xz ];	then
+		compressor="xz -T0"
 	else
 		echo "XZ is not available, but xz compression was requested, exiting."
 		exit 1
@@ -209,100 +209,100 @@ case "$COMPRESSOR" in
 esac
 
 # determines if filename was given with relative or absolute path
-if [ "`echo $ARCHIVE | grep -c '^\/'`" -gt "0" ]; then
-  STAGE4_FILENAME="${ARCHIVE}${EXTENSION}"
-  KSRC_FILENAME="${ARCHIVE}-ksrc${EXTENSION}"
-  KMOD_FILENAME="${ARCHIVE}-kmod${EXTENSION}"
+if [ "`echo $archive | grep -c '^\/'`" -gt "0" ]; then
+  stage4_filename="${archive}${extension}"
+  ksrc_filename="${archive}-ksrc${extension}"
+  kmod_filename="${archive}-kmod${extension}"
 else
-  STAGE4_FILENAME="`pwd`/${ARCHIVE}${EXTENSION}"
-  KSRC_FILENAME="`pwd`/${ARCHIVE}-ksrc${EXTENSION}"
-  KMOD_FILENAME="`pwd`/${ARCHIVE}-kmod${EXTENSION}"
+  stage4_filename="`pwd`/${archive}${extension}"
+  ksrc_filename="`pwd`/${archive}-ksrc${extension}"
+  kmod_filename="`pwd`/${archive}-kmod${extension}"
 fi
 
-if [ ${S_KERNEL} -eq 1 ]; then
-  EXCLUDES_LIST+=("usr/src"/*)
-  EXCLUDES_LIST+=("lib64/modules"/*)
-  EXCLUDES_LIST+=("lib/modules/"*)
-  EXCLUDES_LIST+=("$KSRC_FILENAME")
-  EXCLUDES_LIST+=("$KMOD_FILENAME")
+if [ ${s_kernel} -eq 1 ]; then
+  excludes_list+=("usr/src"/*)
+  excludes_list+=("lib64/modules"/*)
+  excludes_list+=("lib/modules/"*)
+  excludes_list+=("$ksrc_filename")
+  excludes_list+=("$kmod_filename")
 fi
 
-EXCLUDES+=$USER_EXCL
+excludes+=$user_excl
 
 # Exclude backup archive file name
 # Exclude portage repository and distfiles by portageq info
 # Revert to default, if portageq is not available or backup source is not host system
-if [ "$TARGET" == "/" ]; then
-  EXCLUDES_LIST+=("${STAGE4_FILENAME}")
-  if [ ${HAS_PORTAGEQ} == 1 ]; then
-    EXCLUDES_LIST+=($(portageq get_repo_path / gentoo)"/")
-    EXCLUDES_LIST+=($(portageq distdir)"/")
+if [ "$target" == "/" ]; then
+  excludes_list+=("${stage4_filename}")
+  if [ ${has_portageq} == 1 ]; then
+    excludes_list+=($(portageq get_repo_path / gentoo)"/")
+    excludes_list+=($(portageq distdir)"/")
   else
-    EXCLUDES_LIST+=("${EXCLUDES_LIST_PORTAGE[@]}")
+    excludes_list+=("${excludes_list_portage[@]}")
   fi
 else
-  EXCLUDES_LIST+=("${EXCLUDES_LIST_PORTAGE[@]}")
+  excludes_list+=("${excludes_list_portage[@]}")
 fi
 
-if [ ${EXCLUDE_CONNMAN} -eq 1 ]; then
-  EXCLUDES_LIST+=("var/lib/connman/*")
+if [ ${exclude_connman} -eq 1 ]; then
+  excludes_list+=("var/lib/connman/*")
 fi
 
-if [ ${EXCLUDE_BOOT} -eq 1 ]; then
-  EXCLUDES_LIST+=("boot/*")
+if [ ${exclude_boot} -eq 1 ]; then
+  excludes_list+=("boot/*")
 fi
 
-if [ ${EXCLUDE_LOST} -eq 1 ]; then
-  EXCLUDES_LIST+=("lost+found")
+if [ ${exclude_lost} -eq 1 ]; then
+  excludes_list+=("lost+found")
 fi
 
 # Generic tar options:
-TAR_OPTIONS="--create --preserve-permissions --absolute-names --ignore-failed-read --xattrs-include='*.*' --numeric-owner --sparse --exclude-backups --exclude-caches --sort=name"
+tar_options="--create --preserve-permissions --absolute-names --ignore-failed-read --xattrs-include='*.*' --numeric-owner --sparse --exclude-backups --exclude-caches --sort=name"
 
-if [ ${VERBOSE} -eq 1 ]; then
-  TAR_OPTIONS+=" --verbose"
+if [ ${verbose} -eq 1 ]; then
+  tar_options+=" --verbose"
 fi
 
-if [ ${ONE_FS} -eq 1 ]; then
-  TAR_OPTIONS+=" --one-file-system"
+if [ ${one_fs} -eq 1 ]; then
+  tar_options+=" --one-file-system"
 fi
 
 # Loop through the final excludes list, before starting
-for i in "${EXCLUDES_LIST[@]}"; do
+for i in "${excludes_list[@]}"; do
   exclude "$i"
 done
 
 # if not in quiet mode, this message will be displayed:
-if [ "$AGREE" != "yes" ]; then
+if [ "$agree" != "yes" ]; then
   echo -e "Are you sure that you want to make a stage 4 tarball${normal} of the system
-  \rlocated under the following directory: $TARGET ?
+  \rlocated under the following directory: $target ?
   \n\rWARNING: All data is saved by default, you should exclude every security- or privacy-related file,
   \rnot already excluded by mkstage4 options (such as -c), manually per cmdline.
   \rexample: \$ `basename $0` -s /my-backup --exclude=/etc/ssh/ssh_host*\n
   \n\rCOMMAND LINE PREVIEW:
   \r###SYSTEM###
-  \rtar $TAR_OPTIONS $EXCLUDES $OPTIONS -f - ${TARGET}* | ${COMPRESSOR} -$LEVEL -c > $STAGE4_FILENAME"
+  \rtar $tar_options $excludes -f - ${target}* | ${compressor} -$level -c > $stage4_filename"
 
-if [ ${S_KERNEL} -eq 1 ]; then
+if [ ${s_kernel} -eq 1 ]; then
   echo -e "
   \r###KERNEL SOURCE###
-  \rtar $TAR_OPTIONS -f - ${TARGET}usr/src/linux* | ${COMPRESSOR} -$LEVEL -c > $KSRC_FILENAME
+  \rtar $tar_options -f - ${target}usr/src/linux* | ${compressor} -$level -c > $ksrc_filename
 
   \r###KERNEL MODULES###
-  \rtar $TAR_OPTIONS -f - ${TARGET}lib64/modules/* ${TARGET}lib/modules/* | ${COMPRESSOR} -$LEVEL -c >	$KMOD_FILENAME"
+  \rtar $tar_options -f - ${target}lib64/modules/* ${target}lib/modules/* | ${compressor} -$level -c >	$kmod_filename"
 fi
-	echo -e "Compression level: $LEVEL"
+	echo -e "Compression level: $level"
   echo -ne "\n
   \rType \"yes\" to continue or anything else to quit: "
-  read AGREE
+  read agree
 fi
 
 # start stage4 creation:
-if [ "$AGREE" == "yes" ]; then
-	tar $TAR_OPTIONS $EXCLUDES $OPTIONS -f - ${TARGET}* | ${COMPRESSOR} -"$LEVEL" -c > "$STAGE4_FILENAME"
-  if [ ${S_KERNEL} -eq 1 ]; then
-		tar $TAR_OPTIONS -f - ${TARGET}usr/src/linux* | ${COMPRESSOR} -"$LEVEL" -c > "$KSRC_FILENAME"
-    tar $TAR_OPTIONS -f - ${TARGET}lib64/modules/* ${TARGET}lib/modules/* | ${COMPRESSOR} -"$LEVEL" -c > "$KMOD_FILENAME"
+if [ "$agree" == "yes" ]; then
+	tar $tar_options $excludes -f - ${target}* | ${compressor} -"$level" -c > "$stage4_filename"
+  if [ ${s_kernel} -eq 1 ]; then
+		tar $tar_options -f - ${target}usr/src/linux* | ${compressor} -"$level" -c > "$ksrc_filename"
+    tar $tar_options -f - ${target}lib64/modules/* ${target}lib/modules/* | ${compressor} -"$level" -c > "$kmod_filename"
   fi
 fi
 
