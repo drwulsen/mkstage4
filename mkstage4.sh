@@ -54,9 +54,9 @@ var/cache/distfiles/*
 # Excludes function - create tar --exclude=foo options
 exclude()
 {
-  ADDEXCLUDE="$(echo "$1" | sed 's/^\///')"
-  excludes+=" --exclude="$target$ADDEXCLUDE""
-	echo "excluding "$target$ADDEXCLUDE""
+  addexclude="$(echo "$1" | sed 's/^\///')"
+  excludes+=" --exclude="$target$addexclude""
+	echo "excluding "$target$addexclude""
 }
 
 # Check if program is available function
