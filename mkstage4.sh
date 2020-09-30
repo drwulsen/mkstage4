@@ -7,56 +7,58 @@ if ! [ "`whoami`" == "root" ]; then
 fi
 
 # Set variables to default values
-exclude_boot=0
-exclude_connman=0
-exclude_lost=0
-quiet=0
-user_excl=""
-s_kernel=0
-has_portageq=0
-has_bzip2=0
-has_pbzip2=0
-has_gzip=0
-has_pigz=0
-has_xz=0
 compressor="bzip"
+excludes=()
+excludes_list=()
+kmod_includes=()
 level=6
-verbose=0
-one_fs=0
+quiet=0
+
+# Include paths for kernel modules
+kmod_includes_list=(
+"/lib64/modules/"
+"/lib/modules/"
+)
 
 # Excludes - newline-delimited list of things to leave out. Put in double-quotes, please
 excludes_list=(
-*/.bash_history
-*/.lesshst
-dev/*
-var/tmp/*
-media/*
-mnt/*
-proc/*
-run/*
-sys/*
-tmp/*
-var/lock/*
-var/log/*
-var/run/*
-var/lib/docker/*
-home/misc/portage-reiserfs.img
-home/misc/ccache-reiserfs.img
+"*/.bash_history"
+"*/.lesshst"
+"dev/*"
+"var/tmp/*"
+"media/*"
+"mnt/*"
+"proc/*"
+"run/*"
+"sys/*"
+"tmp/*"
+"var/lock/*"
+"var/log/*"
+"var/run/*"
+"var/lib/docker/*"
+"home/misc/portage-reiserfs.img"
+"home/misc/ccache-reiserfs.img"
 )
 
 # Excludes portage default paths
 excludes_list_portage=(
-var/db/repos/gentoo/*
-usr/portage/*
-var/cache/distfiles/*
+"var/db/repos/gentoo/*"
+"usr/portage/*"
+"var/cache/distfiles/*"
 )
 
 # Excludes function - create tar --exclude=foo options
 exclude()
 {
   addexclude="$(echo "$1" | sed 's/^\///')"
-  excludes+=" --exclude="$target$addexclude""
-	echo "excluding "$target$addexclude""
+  excludes+=" --exclude="${target}${addexclude}""
+}
+
+# Kmod include function - add to tar included paths
+kmodinclude()
+{
+  addinclude="$(echo "$1" | sed 's/^\///')"
+  kmod_includes+="${target}${addinclude}"
 }
 
 # Check if program is available function
@@ -78,59 +80,59 @@ has_xz=$(checkset xz)
 
 usage="usage:\n\
 `basename $0` [ -q -c -b -G -l -k -o -P -v -X ] [ -s || -t <target-mountpoint> ] [ -e <additional excludes dir*> ] [ -L 0..9 ] [ -f <archive-filename> ]\n\
+ -s: makes tarball of current system (same as \"-t /\")\n\
+ -t: makes tarball of system located at the <target-mountpoint>\n\
+ -k: separately save current kernel modules and src (smaller & save decompression time)\n\
  -q: quiet mode (no confirmation)\n\
+ -o: stay on filesystem, do not traverse other FS. Watch out for /boot!\n\
  -b: exclude boot directory\n\
  -c: exclude connman network lists\n\
  -l: exclude lost+found directory\n\
- -o: stay on filesystem, do not traverse other FS. Watch out for /boot!\n\
+ -e: an additional excludes directory (one dir one -e)\n\
  -B: compress using pbzip2 or bzip2 (default)\n\
- -X: compress using xz
  -G: compress using pigz or gzip
+ -X: compress using xz
  -L: compression level between 0 (worst) and 9 (best). Default: 6
  -S: show available compression programs
- -e: an additional excludes directory (one dir one -e)\n\
- -s: makes tarball of current system (same as \"-t /\")\n\
- -k: separately save current kernel modules and src (smaller & save decompression time)\n\
- -t: makes tarball of system located at the <target-mountpoint>\n\
  -v: enables tar verbose output\n\
  -h: displays this help message"
 
 # reads options:
 while getopts ':t:e:skqcblovhGBXL:Pf:' flag; do
   case "${flag}" in
-    t)
-    target="$OPTARG";;
-    s)
-    target="/";;
-    q)
-    quiet=1;;
-    f)
-    archive="$OPTARG";;
-    k)
-    s_kernel=1;;
-    c)
-    exclude_connman=1;;
     b)
     exclude_boot=1;;
-    l)
-    exclude_lost=1;;
-    e)
-    user_excl+=" --exclude=${OPTARG}";;
-    o)
-    one_fs=1;;
     B)
     compressor="bzip";;
-    X)
-    compressor="xz";;
+    c)
+    exclude_connman=1;;
+    e)
+    user_excl+=" --exclude=${OPTARG}";;
+    f)
+    archive="$OPTARG";;
   	G)
   	compressor="gzip";;
-		L)
-		level="$OPTARG";;
-    v)
-    verbose=1;;
     h)
     echo -e "$usage"
     exit 0;;
+    k)
+    s_kernel=1;;
+    l)
+    exclude_lost=1;;
+		L)
+		level="$OPTARG";;
+    o)
+    one_fs=1;;
+    q)
+    quiet=1;;
+    s)
+    target="/";;
+    t)
+    target="$OPTARG";;
+    v)
+    verbose=1;;
+    X)
+    compressor="xz";;
     \?)
     echo "Invalid option: -$OPTARG" >&2
     exit 1;;
@@ -158,7 +160,7 @@ if [ "`echo $target | grep -c '\/$'`" -le "0" ]; then
 fi
 
 # checks for quiet mode (no confirmation)
-if [ ${quiet} -eq 1 ]; then
+if [ "$quiet" -eq 1 ]; then
   agree="yes"
 fi
 
@@ -166,7 +168,7 @@ fi
 #bzip and gzip use 1..9, whilst xz can do 0..9
 case "$compressor" in
 	bzip)
-	if [ $level = 0 ]; then
+	if [ "$level" = 0 ]; then
 		level=1
 	fi
 	extension=".tar.bz2"
@@ -220,9 +222,9 @@ else
 fi
 
 if [ ${s_kernel} -eq 1 ]; then
-  excludes_list+=("usr/src"/*)
-  excludes_list+=("lib64/modules"/*)
-  excludes_list+=("lib/modules/"*)
+  excludes_list+=("usr/src/*")
+  excludes_list+=("lib64/modules/*")
+  excludes_list+=("lib/modules/*")
   excludes_list+=("$ksrc_filename")
   excludes_list+=("$kmod_filename")
 fi
@@ -267,6 +269,13 @@ if [ ${one_fs} -eq 1 ]; then
   tar_options+=" --one-file-system"
 fi
 
+# Loop through the includes list, before starting
+for i in "${kmod_includes_list[@]}"; do
+	if [ -e "${target}/${i}" ]; then
+		kmodinclude "$i"
+	fi
+done
+
 # Loop through the final excludes list, before starting
 for i in "${excludes_list[@]}"; do
   exclude "$i"
@@ -281,15 +290,15 @@ if [ "$agree" != "yes" ]; then
   \rexample: \$ `basename $0` -s /my-backup --exclude=/etc/ssh/ssh_host*\n
   \n\rCOMMAND LINE PREVIEW:
   \r###SYSTEM###
-  \rtar $tar_options $excludes -f - ${target}* | ${compressor} -$level -c > $stage4_filename"
+  \rtar $excludes $tar_options -f - ${target}* | ${compressor} -$level -c > $stage4_filename"
 
 if [ ${s_kernel} -eq 1 ]; then
   echo -e "
   \r###KERNEL SOURCE###
-  \rtar $tar_options -f - ${target}usr/src/linux* | ${compressor} -$level -c > $ksrc_filename
+  \rtar ${tar_options} -f - ${target}usr/src/linux* | ${compressor} -${level} -c > $ksrc_filename
 
   \r###KERNEL MODULES###
-  \rtar $tar_options -f - ${target}lib64/modules/* ${target}lib/modules/* | ${compressor} -$level -c >	$kmod_filename"
+  \rtar ${tar_options} -f - ${kmod_includes} | ${compressor} -${level} -c > $kmod_filename"
 fi
 	echo -e "Compression level: $level"
   echo -ne "\n
@@ -299,10 +308,10 @@ fi
 
 # start stage4 creation:
 if [ "$agree" == "yes" ]; then
-	tar $tar_options $excludes -f - ${target}* | ${compressor} -"$level" -c > "$stage4_filename"
+	tar ${excludes} ${tar_options} -f - ${target}* | ${compressor} -${level} -c > "$stage4_filename"
   if [ ${s_kernel} -eq 1 ]; then
-		tar $tar_options -f - ${target}usr/src/linux* | ${compressor} -"$level" -c > "$ksrc_filename"
-    tar $tar_options -f - ${target}lib64/modules/* ${target}lib/modules/* | ${compressor} -"$level" -c > "$kmod_filename"
+		tar ${tar_options} -f - ${target}usr/src/linux* | ${compressor} -${level} -c > "$ksrc_filename"
+    tar ${tar_options} -f - ${kmod_includes} | ${compressor} -${level} -c > "$kmod_filename"
   fi
 fi
 
