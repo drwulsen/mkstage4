@@ -8,11 +8,24 @@ fi
 
 # Set variables to default values
 compressor="bzip"
+exclude_boot=0
+exclude_connman=0
+exclude_lost=0
 excludes=()
 excludes_list=()
+has_portageq=0
+has_bzip2=0
+has_pbzip2=0
+has_gzip=0
+has_pigz=0
+has_xz=0
 kmod_includes=()
 level=6
+one_fs=0
+user_excl=""
+s_kernel=0
 quiet=0
+verbose=0
 
 # Include paths for kernel modules
 kmod_includes_list=(
